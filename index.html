@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>滚动条与骰子 · CRPG 推荐器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+TC:wght@300;400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#080A10;
+    --panel:#0F131C;
+    --panel-2:#151B26;
+    --brass:#C9A227;
+    --brass-dim:#8A701C;
+    --lich:#7B5FB0;
+    --lich-dim:#4A3870;
+    --ember:#D9683A;
+    --vellum:#E4DFD2;
+    --ash:#6E7686;
+    --blood:#B03A3A;
+    --line:rgba(228,223,210,.10);
+    --f-disp:'Cinzel',serif;
+    --f-body:'Noto Serif TC',serif;
+    --f-mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--void);
+    color:var(--vellum);
+    font-family:var(--f-body);
+    font-weight:300;
+    line-height:1.75;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% -10%, rgba(123,95,176,.14), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 100%, rgba(201,162,39,.06), transparent 60%);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:0 24px 120px}
+
+  /* ---------- hero ---------- */
+  header{padding:88px 0 56px;text-align:center;position:relative}
+  .sigil{
+    font-family:var(--f-mono);font-size:11px;letter-spacing:.34em;
+    color:var(--brass-dim);text-transform:uppercase;margin-bottom:22px;
+  }
+  h1{
+    font-family:var(--f-disp);font-weight:700;
+    font-size:clamp(38px,7vw,66px);line-height:1.05;
+    letter-spacing:.02em;color:var(--vellum);
+  }
+  h1 .cast{
+    display:block;font-size:.42em;letter-spacing:.3em;font-weight:400;
+    color:var(--lich);margin-top:18px;text-transform:uppercase;
+  }
+  .thesis{
+    margin:30px auto 0;max-width:540px;color:var(--ash);
+    font-size:16px;line-height:1.9;
+  }
+  .rule{
+    width:100%;height:1px;margin:52px 0;
+    background:linear-gradient(90deg,transparent,var(--line) 15%,var(--line) 85%,transparent);
+  }
+
+  /* ---------- dialogue block ---------- */
+  .q{
+    border-left:2px solid var(--ember);
+    padding:4px 0 4px 22px;margin:0 0 44px;
+    animation:rise .45s cubic-bezier(.2,.7,.3,1) both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .q .eyebrow{
+    font-family:var(--f-mono);font-size:10px;letter-spacing:.28em;
+    color:var(--ember);text-transform:uppercase;margin-bottom:10px;
+  }
+  .q .prompt{
+    font-family:var(--f-disp);font-size:23px;font-weight:600;
+    line-height:1.4;margin-bottom:6px;color:var(--vellum);
+  }
+  .q .sub{color:var(--ash);font-size:14.5px;margin-bottom:18px}
+  .opts{list-style:none;display:flex;flex-direction:column;gap:2px}
+  .opt{
+    display:flex;gap:14px;align-items:baseline;
+    padding:11px 14px;cursor:pointer;
+    border:1px solid transparent;border-radius:2px;
+    transition:background .16s,border-color .16s,transform .16s;
+    background:transparent;text-align:left;width:100%;
+    font-family:var(--f-body);font-size:16.5px;color:var(--vellum);font-weight:300;
+  }
+  .opt:hover{background:rgba(217,104,58,.07);border-color:rgba(217,104,58,.3);transform:translateX(3px)}
+  .opt:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+  .opt .n{
+    font-family:var(--f-mono);font-size:13px;color:var(--ember);
+    min-width:18px;font-weight:600;
+  }
+  .opt.picked{background:rgba(201,162,39,.10);border-color:var(--brass-dim)}
+  .opt.picked .n{color:var(--brass)}
+  .opt .tail{color:var(--ash);font-size:13px;display:block;margin-top:2px;line-height:1.5}
+
+  /* ---------- played-games picker ---------- */
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+  .chip{
+    font-family:var(--f-mono);font-size:12px;letter-spacing:.03em;
+    padding:7px 12px;border:1px solid var(--line);border-radius:2px;
+    background:transparent;color:var(--ash);cursor:pointer;
+    transition:all .15s;
+  }
+  .chip:hover{border-color:var(--lich);color:var(--vellum)}
+  .chip:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+  .chip.on{background:rgba(123,95,176,.18);border-color:var(--lich);color:var(--vellum)}
+  .chip.on::before{content:'✦ ';color:var(--lich)}
+
+  .act{
+    margin-top:34px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;
+  }
+  .btn{
+    font-family:var(--f-disp);font-weight:600;font-size:15px;letter-spacing:.12em;
+    text-transform:uppercase;padding:14px 30px;cursor:pointer;
+    background:var(--brass);color:var(--void);border:none;border-radius:2px;
+    transition:filter .15s,transform .15s;
+  }
+  .btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+  .btn:focus-visible{outline:2px solid var(--vellum);outline-offset:3px}
+  .btn.ghost{background:transparent;color:var(--ash);border:1px solid var(--line)}
+  .btn.ghost:hover{color:var(--vellum);border-color:var(--ash)}
+  .btn[disabled]{opacity:.35;cursor:not-allowed;transform:none;filter:none}
+  .hint{font-family:var(--f-mono);font-size:11.5px;color:var(--ash);letter-spacing:.05em}
+
+  /* ---------- stat block (signature) ---------- */
+  .sheet{
+    border:1px solid var(--line);background:var(--panel);
+    padding:0;margin:0 0 46px;animation:rise .5s cubic-bezier(.2,.7,.3,1) both;
+  }
+  .sheet-hd{
+    background:var(--panel-2);border-bottom:1px solid var(--line);
+    padding:16px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .sheet-hd h2{
+    font-family:var(--f-disp);font-size:15px;font-weight:600;
+    letter-spacing:.2em;text-transform:uppercase;color:var(--brass);
+  }
+  .sheet-hd .meta{font-family:var(--f-mono);font-size:11px;color:var(--ash);letter-spacing:.1em}
+  .stats{padding:8px 0}
+  .stat{
+    display:grid;grid-template-columns:112px 1fr 42px;
+    gap:16px;align-items:center;padding:11px 22px;
+    border-bottom:1px solid rgba(228,223,210,.05);
+  }
+  .stat:last-child{border-bottom:none}
+  .stat .k{
+    font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ash);
+  }
+  .track{height:5px;background:rgba(228,223,210,.07);border-radius:0;position:relative;overflow:hidden}
+  .fill{
+    height:100%;background:linear-gradient(90deg,var(--lich-dim),var(--lich));
+    width:0;transition:width .9s cubic-bezier(.2,.8,.2,1);
+  }
+  .stat .v{
+    font-family:var(--f-mono);font-size:18px;font-weight:600;
+    color:var(--vellum);text-align:right;
+  }
+  .stat .note{
+    grid-column:2 / 4;font-size:13px;color:var(--ash);margin-top:-4px;
+  }
+
+  /* ---------- results ---------- */
+  .verdict{
+    font-family:var(--f-mono);font-size:11px;letter-spacing:.28em;
+    text-transform:uppercase;color:var(--brass-dim);margin:0 0 20px;
+  }
+  .rec{
+    border:1px solid var(--line);border-left:2px solid var(--lich);
+    background:var(--panel);padding:22px 24px;margin-bottom:14px;
+    animation:rise .5s cubic-bezier(.2,.7,.3,1) both;
+  }
+  .rec:first-of-type{border-left-color:var(--brass)}
+  .rec-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:8px}
+  .rec h3{
+    font-family:var(--f-disp);font-size:21px;font-weight:600;line-height:1.3;
+  }
+  .rec .orig{
+    font-family:var(--f-mono);font-size:11.5px;color:var(--ash);
+    letter-spacing:.04em;margin-top:3px;display:block;
+  }
+  .dc{
+    font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;
+    color:var(--brass);white-space:nowrap;text-align:right;line-height:1.5;
+  }
+  .dc b{display:block;font-size:21px;font-weight:600;color:var(--vellum)}
+  .rec p{font-size:15px;color:var(--vellum);opacity:.85;margin-top:10px}
+  .why{
+    font-family:var(--f-mono);font-size:11.5px;color:var(--ash);
+    margin-top:12px;padding-top:12px;border-top:1px solid rgba(228,223,210,.06);
+    letter-spacing:.02em;line-height:1.8;
+  }
+  .why span{color:var(--lich)}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
+  .tag{
+    font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ash);border:1px solid var(--line);padding:3px 8px;
+  }
+  footer{
+    text-align:center;padding:60px 0 0;color:var(--ash);
+    font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;
+  }
+  .hidden{display:none}
+  @media(max-width:600px){
+    .stat{grid-template-columns:88px 1fr 36px;gap:11px;padding:10px 16px}
+    .sheet-hd{padding:14px 16px}
+    .rec{padding:18px 16px}
+    header{padding:60px 0 40px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="sigil">投掷一次 · 决定接下来的三百小时</div>
+  <h1>滚动条与骰子<span class="cast">CRPG 推荐器</span></h1>
+  <p class="thesis">回答几个问题。系统会把你的答案换算成四项数值，拿去跟数据库里的每一款游戏比对距离，然后告诉你哪一款最接近你。</p>
+</header>
+
+<div class="rule"></div>
+
+<main id="quiz"></main>
+
+<div id="out" class="hidden"></div>
+
+<footer>数据库 · <span id="dbcount">0</span> 款 · 持续增补</footer>
+</div>
+
+<script>
+/* ============ 数据库 ============
+   era      1(现代友好) → 10(古董)
+   turn     0(即时动作) → 5(即时暂停) → 10(纯回合制)
+   protag   0(你只是世界里的一粒沙) → 10(你是谁，就是整个谜题)
+   text     0(能跳过) → 10(读到眼睛脱窗)
+================================= */
+const DB = [
+  // ── 现代高制作 ──
+  {zh:"博德之门 3",en:"Baldur's Gate 3",era:1,turn:10,protag:6,text:5,newbie:true,tags:["西幻","D&D"],blurb:"当代CRPG的门面。全配音、华丽演出，甚至r18cg都很华丽。有一只人气很高的吸血鬼和能变熊的德鲁伊。"},
+  {zh:"神界：原罪 2",en:"Divinity: Original Sin 2",era:1,turn:10,protag:7,text:7,tags:["西幻","元素交互"],blurb:"博德之门同公司的前作，依然海滩苏醒，依然回合制高画质新时代crpg。话说音乐质量也太高了。另外这作有可爱骷髅，人外控友好。"},
+  {zh:"巫师 3",en:"The Witcher 3",era:1,turn:1,protag:3,text:6,tags:["低魔","动作"],blurb:"主角是谁早就定好了，你只是替他做选择。开放世界，动作战斗，叙事密度高。高级通马桶，有对人气很高的南通。"},
+  {zh:"上古卷轴 5：天际",en:"Skyrim",era:1,turn:0,protag:4,text:2,tags:["西幻","沙盒"],blurb:"传说之作，来都来了你就玩吧。质量高到让人怀疑杯赛献祭了之后的所有作品给它。"},
+  {zh:"辐射 4",en:"Fallout 4",era:1,turn:0,protag:3,text:2,tags:["末世","射击"],blurb:"枪打得好，房子盖得爽，对话轮盘是最大争议。当射击游戏玩不亏。"},
+  {zh:"战锤 40K：行商浪人",en:"Rogue Trader",era:1,turn:10,protag:9,text:7,newbie:true,tags:["科幻","战锤"],blurb:"我是小皇帝之整个星系的皇帝。物理意义上的。主角公不要怕你命中注定的龙傲天来了。虽然战斗有点卡手。"},
+  {zh:"极乐迪斯科",en:"Disco Elysium",era:1,turn:10,protag:10,text:10,tags:["都市","无战斗"],blurb:"没有战斗。你的技能会在脑子里吵架。遇到全世界最好的助手，没有目标的漫步在已经逝去的旧时代里，最后找到自己。"},
+  {zh:"Esoteric Ebb",en:"Esoteric Ebb",era:1,turn:10,protag:10,text:10,tags:["D&D","Disco-like"],blurb:"用5e规则写的极乐迪斯科。失忆的牧师、选举、还有一个开殡仪馆的巫妖。冷门到不合理。"},
+  // ── 现代硬派 ──
+  {zh:"开拓者：拥王者",en:"Pathfinder: Kingmaker",era:2,turn:6,protag:6,text:8,tags:["西幻","建国"],blurb:"我是大皇帝之成神模拟器。"},
+  {zh:"开拓者：正义之怒",en:"Pathfinder: WotR",era:2,turn:8,protag:9,text:9,tags:["西幻","神话"],blurb:"我是大皇帝之成神模拟器2。有个天杀的模拟经营玩法，不喜欢经营请谨慎选择。但...可以当大皇帝。"},
+  {zh:"神界：原罪 1",en:"Divinity: Original Sin",era:2,turn:10,protag:5,text:6,tags:["西幻"],blurb:"二代的粗糙版本。系统雏形都在，但叙事和节奏差一截。"},
+  {zh:"废土 3",en:"Wasteland 3",era:2,turn:10,protag:4,text:6,tags:["末世","黑色幽默"],blurb:"科罗拉多的冰天雪地，一队人，一堆道德烂帐。回合制战术，快乐捡垃圾。"},
+  // ── 千禧年后 ──
+  {zh:"永恒之柱",en:"Pillars of Eternity",era:3,turn:5,protag:8,text:9,tags:["西幻","即时暂停"],blurb:"对Infinity Engine时代的一次正经复刻。快乐收集朋友之旅。老牌冒险故事。"},
+  {zh:"永恒之柱 2：死火",en:"Deadfire",era:3,turn:5,protag:8,text:9,tags:["西幻","航海"],blurb:"比一代好玩太多。开船、群岛、神明政治。可惜卖得不好。"},
+  {zh:"天外世界",en:"The Outer Worlds",era:3,turn:0,protag:5,text:5,tags:["科幻","讽刺"],blurb:"轻量、好入口、对企业资本主义的整场嘲笑。神人讲键政小故事。"},
+  {zh:"辐射：新维加斯",en:"Fallout: New Vegas",era:3,turn:2,protag:6,text:7,tags:["末世","阵营"],blurb:"酷儿友好系列。走遍废土并作出自由度超高（也许太高了）的选择。"},
+  {zh:"质量效应（三部曲）",en:"Mass Effect",era:3,turn:2,protag:7,text:6,tags:["科幻","太空歌剧"],blurb:"成为船长航行宇宙并做出每一步都会影响下一个任务的严肃决定。遇到全世界最可爱的外星人们。人外控友好。"},
+  {zh:"龙腾世纪（三部曲）",en:"Dragon Age",era:3,turn:4,protag:6,text:7,tags:["西幻"],blurb:"一代是即时暂停的正统CRPG，后面越来越动作化。起源值得单独玩。拉瑞安当年本来想变成这样的。"},
+  {zh:"废土 2",en:"Wasteland 2",era:3,turn:10,protag:2,text:6,tags:["末世","战术"],blurb:"硬派、干燥、不讨好。是辐射的亲爹的续作。"},
+  {zh:"巫师 2",en:"The Witcher 2",era:3,turn:1,protag:3,text:6,tags:["低魔"],blurb:"某章会因为你的选择整个换掉。分歧幅度大到今天都少见。"},
+  {zh:"阿玛拉王国：清算",en:"Kingdoms of Amalur",era:3,turn:0,protag:5,text:4,tags:["西幻","动作"],blurb:"战斗手感在同类里数一数二。剧情平庸，但打得爽。"},
+  {zh:"ATOM RPG",en:"ATOM RPG",era:3,turn:10,protag:3,text:7,tags:["末世","苏联"],blurb:"苏联版的辐射，粗糙、幽默、意外地有味道。"},
+  // ── Infinity Engine 黄金期 ──
+  {zh:"博德之门 1 & 2",en:"Baldur's Gate 1&2",era:4,turn:5,protag:9,text:8,tags:["西幻","D&D","经典"],blurb:"整个类型的地基。二代的Irenicus是CRPG史上最好的反派之一。"},
+  {zh:"冰风谷 1 & 2",en:"Icewind Dale",era:4,turn:5,protag:1,text:4,tags:["西幻","地城"],blurb:"没有主角故事，一支队伍拿着几个破棍子就要去挑战邪魔了。纯粹的战术游戏。"},
+  {zh:"无冬之夜 1 & 2",en:"Neverwinter Nights",era:4,turn:5,protag:6,text:7,tags:["西幻","模块"],blurb:"官方战役普通，但二代数据片是神作，战斗爽。"},
+  {zh:"上古卷轴 3：晨风",en:"Morrowind",era:4,turn:0,protag:8,text:8,tags:["西幻","异界"],blurb:"没有任务标记，没人牵你的手。你得自己读信、看地图、问路。最不像游戏的一款上古卷轴。"},
+  {zh:"上古卷轴 4：湮灭",en:"Oblivion",era:4,turn:0,protag:5,text:3,tags:["西幻"],blurb:"介于晨风和天际之间。黑暗兄弟会的支线比主线好。"},
+  {zh:"巫师 1",en:"The Witcher",era:4,turn:2,protag:3,text:7,tags:["低魔"],blurb:"战斗系统很怪，小众b喜欢。"},
+  {zh:"哥特王朝 1 & 2",en:"Gothic",era:4,turn:1,protag:2,text:5,tags:["低魔","硬核"],blurb:"开场你是最弱的那个人，所有NPC都可以打死你。世界不会等你变强。"},
+  {zh:"暗影狂奔（三部曲）",en:"Shadowrun Returns",era:4,turn:10,protag:5,text:8,tags:["赛博","奇幻"],blurb:"赛博朋克2077本来想变成这样的。"},
+  {zh:"暗黑破坏神 2",en:"Diablo II",era:4,turn:0,protag:2,text:1,tags:["刷宝","动作"],blurb:"严格说不是CRPG，但它定义了点击、掉宝、再来一轮的叙事。都考古到这了不如玩一下成为老资历"},
+  // ── 黑岛 / 前3D ──
+  {zh:"辐射 1 & 2",en:"Fallout 1&2",era:5,turn:10,protag:4,text:7,tags:["末世","经典"],blurb:"整个末世类型的源头。一代有时限压力，二代放飞自我。冷酷、自由、残忍。"},
+  {zh:"Underrail",en:"Underrail",era:5,turn:10,protag:3,text:7,tags:["末世","地下"],blurb:"会在前十小时死很多次，然后突然开窍。build不对就寸步难行。"},
+  {zh:"Avernum 系列",en:"Avernum",era:5,turn:10,protag:3,text:8,tags:["西幻","地下"],blurb:"一个人做了三十年的系列。画面原始，世界观和写作诚实得惊人。"},
+  // ── 世纪之交的怪物 ──
+  {zh:"异域镇魂曲",en:"Planescape: Torment",era:6,turn:5,protag:10,text:10,tags:["异界","文学"],blurb:"「什么能改变一个人的本质？」在千门万户之城探索自我与未来，dnd中的dnd，对后世几乎所有crpg产生影响的传说之作。"},
+  {zh:"旧共和国武士 1 & 2",en:"KOTOR 1&2",era:6,turn:5,protag:10,text:8,tags:["星战","科幻"],blurb:"一代有史上最好的叙事转折之一。二代（Obsidian做的）是对整个星战道德观的拆解。"},
+  {zh:"奥秘：蒸汽与魔法",en:"Arcanum",era:6,turn:8,protag:6,text:9,tags:["蒸汽庞克","魔法"],blurb:"魔法与科技互斥的世界。战斗很折磨，但，没人能拒绝成为老资历。"},
+  {zh:"吸血鬼：避世血族",en:"VtM: Bloodlines",era:6,turn:2,protag:8,text:9,tags:["都市","哥德"],blurb:"选Malkavian那一族，全部对话会重写成疯子的语言。到今天还是没人做得出这种东西。"},
+  {zh:"杀出重围",en:"Deus Ex",era:6,turn:0,protag:7,text:7,tags:["赛博","潜行"],blurb:"可以用任何方式通关。阴谋论、义体、选择。它比它的续作都好。"},
+  {zh:"网络奇兵 2",en:"System Shock 2",era:6,turn:0,protag:6,text:6,tags:["科幻","恐怖"],blurb:"太空站恐怖。资源稀缺到你会为一颗子弹焦虑。最好的AI反派。"},
+  {zh:"灰鹰：邪恶元素神庙",en:"Temple of Elemental Evil",era:6,turn:10,protag:2,text:4,tags:["D&D","战术"],blurb:"D&D 3.5规则实作得最忠实的一款。除了战斗什么都没有，战斗，爽。"},
+  {zh:"颓废年代",en:"Age of Decadence",era:6,turn:10,protag:6,text:9,tags:["末世","罗马"],blurb:"每一场战斗都可能杀死你，而且大部分可以用谈话绕过。极度硬核，极度真诚。"},
+  // ── 古董区 ──
+  {zh:"上古卷轴 1 & 2",en:"Arena / Daggerfall",era:7,turn:0,protag:4,text:5,tags:["西幻","古董"],blurb:"Daggerfall的地图比英国大，而且全部是进程生成的。你会迷路，那是重点。"},
+  {zh:"神界",en:"Divine Divinity",era:7,turn:2,protag:4,text:6,tags:["西幻"],blurb:"Larian的起点。像暗黑但有正经的CRPG骨架。"},
+  {zh:"暗黑破坏神 1",en:"Diablo",era:7,turn:0,protag:3,text:2,tags:["刷宝","恐怖"],blurb:"比二代更阴森、更慢、更像恐怖游戏。"},
+  {zh:"冰城传奇（三部曲）",en:"The Bard's Tale",era:8,turn:10,protag:1,text:3,tags:["地城","方格"],blurb:"你要自己在方格纸上画地图。那个年代玩游戏需要文具。"},
+  {zh:"废土 1",en:"Wasteland",era:8,turn:10,protag:2,text:6,tags:["末世","始祖"],blurb:"辐射的直系祖先。1988年。它的文本印在纸本手册上，游戏只给你编号。"},
+  {zh:"巫术系列",en:"Wizardry",era:9,turn:10,protag:1,text:2,tags:["地城","始祖"],blurb:"第一人称方格迷宫的源头。日本整个JRPG产业都是从这里长出来的。"},
+  {zh:"创世纪系列",en:"Ultima",era:9,turn:8,protag:7,text:6,tags:["西幻","始祖"],blurb:"四代第一次让「你是什么样的人」成为机制。整个类型的道德系统从这里开始。"},
+  {zh:"星空",en:"Starfield",era:10,turn:0,protag:3,text:3,tags:["科幻","争议"],blurb:"恭喜你看到它，这意味着你已经是crpg领域大神，现在只要打开神奇小陶制作的神奇星空，你就会从老资历变成社区败类并且大概率宁可二周目其他任何crpg。"}
+];
+
+/* ============ 题目 ============ */
+const Q = [
+  {
+    id:"entry", eyebrow:"角色创建 · 第一步", prompt:"你玩过CRPG吗？",
+    sub:"这一题决定后面问什么。诚实回答，没人在评分。",
+    opts:[
+      {t:"完全没有。这是第一次。", tail:"→ 走简短路线，只问三题", v:"new"},
+      {t:"玩过几款，算是半个门内人。", tail:"→ 完整问卷", v:"some"},
+      {t:"我玩了很多。给我点没玩过的。", tail:"→ 完整问卷 + 已玩清单校准", v:"vet"}
+    ]
+  },
+  {
+    id:"era", eyebrow:"耐受度检定", prompt:"你能忍受多老的游戏？",
+    sub:"这是最强的过滤器。画面和接口的年代感，劝退掉的人比难度多。",
+    opts:[
+      {t:"我要现代的。没有高画质我就退款。", tail:"2020年之后", v:1},
+      {t:"十年内都可以，别太古早。", tail:"约2014起", v:3},
+      {t:"2D等距视角没问题，我读得下去。", tail:"Infinity Engine 时代", v:4.5},
+      {t:"画面是什么？我只要规则够深。", tail:"90年代也吃得下", v:6.5},
+      {t:"给我方格纸，我自己画地图。", tail:"古董区，全部开放", v:9}
+    ]
+  },
+  {
+    id:"turn", eyebrow:"战斗系统", prompt:"你想怎么打架？",
+    sub:"这一轴决定的是节奏，不是难度。",
+    opts:[
+      {t:"回合制。我要慢慢想、算数字。", tail:"BG3、神界、行商浪人", v:10},
+      {t:"即时暂停。混乱中按空白键的快感。", tail:"博德之门、柱子", v:5},
+      {t:"动作。我要自己挥剑。", tail:"巫师、上古卷轴", v:0},
+      {t:"我对战斗没兴趣，能绕过最好。", tail:"极乐迪斯科、颓废年代", v:10, extra:{lowCombat:true}}
+    ]
+  },
+  {
+    id:"protag", eyebrow:"叙事重心", prompt:"你想在故事里是什么？",
+    sub:"这一题比题材更能决定你会不会爱上一款游戏。",
+    opts:[
+      {t:"我要「我是谁」本身就是谜题。", tail:"异域镇魂曲、KOTOR、Esoteric Ebb", v:10},
+      {t:"我要当那个决定一切的人。", tail:"行商浪人、正义之怒", v:8},
+      {t:"我想自己定义主角，但不用当救世主。", tail:"博德之门3、新维加斯", v:5.5},
+      {t:"世界比我重要。我只是路过。", tail:"辐射、哥特、Underrail", v:1.5}
+    ]
+  },
+  {
+    id:"text", eyebrow:"阅读量", prompt:"你愿意读多少字？",
+    sub:"这一题和年代一样重要。有些游戏的文本量等于一本长篇小说，选错会在第一小时退款。",
+    opts:[
+      {t:"越多越好。我是文艺b。", tail:"", v:10},
+      {t:"我有读书习惯，但暂时不想摄入严肃文学作品。", tail:"", v:7},
+      {t:"适量。我爱读网文，视觉小说也可以接受。", tail:"", v:4.5},
+      {t:"能跳过就跳过。", tail:"", v:1.5}
+    ]
+  },
+  {
+    id:"tag", eyebrow:"外皮", prompt:"你想待在哪个世界？",
+    sub:"权重最低的一轴。合不合，主要看上面四项。",
+    opts:[
+      {t:"西方奇幻。剑、龙、D&D。", tail:"", v:["西幻","D&D"]},
+      {t:"科幻。太空、义体、企业。", tail:"", v:["科幻","赛博","星战","战锤"]},
+      {t:"末世。废墟、辐射、没有明天。", tail:"", v:["末世"]},
+      {t:"阴暗现代。都市、吸血鬼、侦探。", tail:"", v:["都市","哥德","低魔"]},
+      {t:"无所谓，游戏好就行。", tail:"", v:[]}
+    ]
+  }
+];
+
+/* ============ 状态 ============ */
+const A = {};           // answers
+const played = new Set();
+let idx = 0;
+
+const quiz = document.getElementById('quiz');
+const out  = document.getElementById('out');
+document.getElementById('dbcount').textContent = DB.length;
+
+function flow(){
+  // 新人只走 era 之外的简短路线
+  if(A.entry === 'new') return ['entry','era','turn','text','tag'];
+  const base = ['entry','era','turn','protag','text','tag'];
+  if(A.entry === 'vet') base.push('_played');
+  return base;
+}
+
+function render(){
+  const order = flow();
+  quiz.innerHTML = '';
+  order.slice(0, idx+1).forEach(id=>{
+    if(id === '_played') quiz.appendChild(playedBlock());
+    else quiz.appendChild(qBlock(Q.find(q=>q.id===id)));
+  });
+  const last = quiz.lastElementChild;
+  if(last && idx>0) last.scrollIntoView({block:'center'});
+}
+
+function qBlock(q){
+  const el = document.createElement('section');
+  el.className = 'q';
+  el.innerHTML = `<div class="eyebrow">${q.eyebrow}</div>
+    <div class="prompt">${q.prompt}</div>
+    <div class="sub">${q.sub}</div>`;
+  const ul = document.createElement('ul');
+  ul.className = 'opts';
+  q.opts.forEach((o,i)=>{
+    const li = document.createElement('li');
+    const b  = document.createElement('button');
+    b.className = 'opt' + (A[q.id]!==undefined && JSON.stringify(A[q.id])===JSON.stringify(o.v) ? ' picked':'');
+    b.innerHTML = `<span class="n">${i+1}.</span><span>${o.t}${o.tail?`<span class="tail">${o.tail}</span>`:''}</span>`;
+    b.onclick = ()=>{
+      A[q.id] = o.v;
+      if(o.extra) Object.assign(A, o.extra);
+      const order = flow();
+      const pos = order.indexOf(q.id);
+      if(pos === order.length-1){ finish(); return; }
+      idx = Math.max(idx, pos+1);
+      out.classList.add('hidden');
+      render();
+    };
+    li.appendChild(b); ul.appendChild(li);
+  });
+  el.appendChild(ul);
+  return el;
+}
+
+function playedBlock(){
+  const el = document.createElement('section');
+  el.className = 'q';
+  el.innerHTML = `<div class="eyebrow">校准 · 最后一步</div>
+    <div class="prompt">哪些你已经玩过了？</div>
+    <div class="sub">玩过的游戏比任何一题都准。系统会拿它们去修正你的坐标，然后把它们从结果里剔除。</div>`;
+  const box = document.createElement('div');
+  box.className = 'chips';
+  DB.forEach((g,i)=>{
+    const c = document.createElement('button');
+    c.className = 'chip' + (played.has(i)?' on':'');
+    c.textContent = g.zh;
+    c.onclick = ()=>{ played.has(i)?played.delete(i):played.add(i); c.classList.toggle('on'); };
+    box.appendChild(c);
+  });
+  el.appendChild(box);
+  const act = document.createElement('div');
+  act.className = 'act';
+  const go = document.createElement('button');
+  go.className='btn'; go.textContent='掷骰';
+  go.onclick = finish;
+  const hint = document.createElement('span');
+  hint.className='hint'; hint.textContent='没玩过任何一款也可以直接掷';
+  act.appendChild(go); act.appendChild(hint);
+  el.appendChild(act);
+  return el;
+}
+
+/* ============ 计算 ============ */
+function finish(){
+  // 用户坐标
+  let v = {
+    era:    A.era    ?? (A.entry==='new' ? 1.5 : 3),
+    turn:   A.turn   ?? 6,
+    protag: A.protag ?? 5.5,
+    text:   A.text   ?? (A.entry==='new' ? 4 : 6)
+  };
+  const wantTags = A.tag || [];
+
+  // 已玩过的游戏反过来校准坐标（权重 35%）
+  const pl = [...played].map(i=>DB[i]);
+  if(pl.length){
+    const avg = k => pl.reduce((s,g)=>s+g[k],0)/pl.length;
+    ['era','turn','protag','text'].forEach(k=>{
+      v[k] = v[k]*0.65 + avg(k)*0.35;
+    });
+  }
+
+  const W = {era:1.35, turn:1.0, protag:1.15, text:1.2};
+  const scored = DB.map((g,i)=>{
+    if(played.has(i)) return null;
+    let d = 0;
+    for(const k in W){ d += W[k] * Math.pow(g[k]-v[k], 2); }
+    let dist = Math.sqrt(d);
+    // 题材：命中就拉近
+    const hit = wantTags.length ? g.tags.some(t=>wantTags.includes(t)) : false;
+    if(hit) dist *= 0.72;
+    // 不想打架的人，避开纯战术
+    if(A.lowCombat && g.text < 6) dist *= 1.4;
+    if(A.entry === 'new' && v.era < 4 && g.newbie) dist *= 0.5;
+    return {g, dist, hit, i};
+  }).filter(Boolean).sort((a,b)=>a.dist-b.dist);
+
+  show(v, scored.slice(0,4), pl.length);
+}
+
+const AXIS = [
+  {k:'era',    label:'年代耐受',  note:v=>v<2?'你要崭新的东西':v<4?'近十年最舒服':v<6?'2D等距没问题':v<8?'能吃90年代':'你连方格纸都能接受'},
+  {k:'turn',   label:'回合倾向',  note:v=>v>7.5?'你要慢慢算':v>3.5?'即时暂停的节奏':'你要自己挥剑'},
+  {k:'protag', label:'主角重量',  note:v=>v>8?'「我是谁」必须是内核':v>5?'你要能决定事情':v>3?'不当救世主也行':'世界比你重要'},
+  {k:'text',   label:'阅读耐力',  note:v=>v>8?'你来就是为了读':v>6?'份量重没关系':v>3?'适量':'能跳过就跳过'}
+];
+
+function show(v, list, plCount){
+  const stats = AXIS.map(a=>{
+    const val = v[a.k];
+    return `<div class="stat">
+      <span class="k">${a.label}</span>
+      <span class="track"><span class="fill" style="width:${val*10}%"></span></span>
+      <span class="v">${val.toFixed(1)}</span>
+      <span class="note">${a.note(val)}</span>
+    </div>`;
+  }).join('');
+
+  const recs = list.map((r,n)=>{
+    const dc = Math.max(4, Math.round(30 - r.dist*2.6));
+    const bits = [];
+    AXIS.forEach(a=>{
+      const gap = Math.abs(r.g[a.k]-v[a.k]);
+      if(gap < 1.6) bits.push(`<span>${a.label}</span> 几乎重合`);
+    });
+    if(r.hit) bits.push(`题材 <span>命中</span>`);
+    if(!bits.length) bits.push(`整体最接近，但没有一轴完全贴合 — 值得一试的意外`);
+    return `<article class="rec" style="animation-delay:${n*70}ms">
+      <div class="rec-top">
+        <div>
+          <h3>${r.g.zh}</h3>
+          <span class="orig">${r.g.en}</span>
+        </div>
+        <div class="dc">匹配<b>${dc}</b></div>
+      </div>
+      <p>${r.g.blurb}</p>
+      <div class="tags">${r.g.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      <div class="why">${bits.join(' · ')}</div>
+    </article>`;
+  }).join('');
+
+  out.innerHTML = `
+    <div class="rule"></div>
+    <section class="sheet">
+      <div class="sheet-hd">
+        <h2>你的角色卡</h2>
+        <span class="meta">${plCount?`已玩 ${plCount} 款 · 坐标已校准`:'未校准'}</span>
+      </div>
+      <div class="stats">${stats}</div>
+    </section>
+    <p class="verdict">按距离排序 · 第一项最接近</p>
+    ${recs}
+    <div class="act">
+      <button class="btn ghost" id="again">重新来过</button>
+    </div>`;
+  out.classList.remove('hidden');
+  requestAnimationFrame(()=>{
+    out.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  document.getElementById('again').onclick = ()=>{
+    for(const k in A) delete A[k];
+    played.clear(); idx = 0;
+    out.classList.add('hidden'); out.innerHTML='';
+    render();
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+}
+
+render();
+</script>
+</body>
+</html>
