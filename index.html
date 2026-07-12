@@ -370,6 +370,7 @@ const Q = [
 
 /* ============ 状态 ============ */
 const A = {};           // answers
+const PICK = {};         // 记住每题点的是第几个选项（按 index，避免同值选项一起亮）
 const played = new Set();
 let idx = 0;
 
@@ -407,10 +408,11 @@ function qBlock(q){
   q.opts.forEach((o,i)=>{
     const li = document.createElement('li');
     const b  = document.createElement('button');
-    b.className = 'opt' + (A[q.id]!==undefined && JSON.stringify(A[q.id])===JSON.stringify(o.v) ? ' picked':'');
+    b.className = 'opt' + (PICK[q.id] === i ? ' picked':'');
     b.innerHTML = `<span class="n">${i+1}.</span><span>${o.t}${o.tail?`<span class="tail">${o.tail}</span>`:''}</span>`;
     b.onclick = ()=>{
       A[q.id] = o.v;
+      PICK[q.id] = i;
       if(o.extra) Object.assign(A, o.extra);
       const order = flow();
       const pos = order.indexOf(q.id);
@@ -552,6 +554,7 @@ function show(v, list, plCount){
   });
   document.getElementById('again').onclick = ()=>{
     for(const k in A) delete A[k];
+    for(const k in PICK) delete PICK[k];
     played.clear(); idx = 0;
     out.classList.add('hidden'); out.innerHTML='';
     render();
